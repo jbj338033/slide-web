@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ProgressBar } from './components/ProgressBar';
 import { Controls } from './components/Controls';
+import { TopControls } from './components/TopControls';
 import { slides } from './slides';
 
 const SLIDE_DURATION = 5000;
@@ -13,6 +14,7 @@ export default function SlidePage() {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isPrevAnimating, setIsPrevAnimating] = useState(false);
   const [isNextAnimating, setIsNextAnimating] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -67,6 +69,27 @@ export default function SlidePage() {
     }
   };
 
+  const handleToggleMute = () => {
+    setIsMuted(!isMuted);
+  };
+
+  const handleShare = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Slide Presentation',
+          url: window.location.href,
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+      }
+    } catch (err) {}
+  };
+
+  const handleExit = () => {
+    window.history.back();
+  };
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
@@ -87,6 +110,7 @@ export default function SlidePage() {
 
   return (
     <div className="w-screen h-screen bg-white relative">
+      <TopControls isMuted={isMuted} onToggleMute={handleToggleMute} onShare={handleShare} onExit={handleExit} />
       <ProgressBar current={current} progress={progress} totalSlides={slides.length} />
 
       <div className="w-full h-full flex items-center justify-center pt-6">
