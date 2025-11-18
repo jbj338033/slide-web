@@ -2,11 +2,12 @@ import { ReadingText } from '../components/ReadingText';
 
 interface Slide6Props {
   progress: number;
-  lines: string[];
 }
 
-export const Slide6 = ({ progress, lines }: Slide6Props) => (
+export const Slide6 = ({ progress }: Slide6Props) => (
   <div className="max-w-5xl">
-    <ReadingText lines={lines} progress={progress} />
+    <ReadingText progress={progress}>
+      {['GPT-4와 Whisper API로', '자동 요약 및 스크립트 생성']}
+    </ReadingText>
   </div>
 );

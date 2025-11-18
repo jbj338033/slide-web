@@ -1,34 +1,35 @@
 import { useMemo } from 'react';
 
 interface ReadingTextProps {
-  lines: string[];
+  children: string[];
   progress: number;
 }
 
 const TEXT_READING_RATIO = 0.8;
 
-export const ReadingText = ({ lines, progress }: ReadingTextProps) => {
+export const ReadingText = ({ children, progress }: ReadingTextProps) => {
   const lineData = useMemo(() => {
+    const lines = children;
     const totalLines = lines.length;
     if (totalLines === 0) return [];
 
     const textProgress = Math.min(progress / TEXT_READING_RATIO, 100);
     const progressPerLine = 100 / totalLines;
 
-    return lines.map((text, index) => {
-      const lineStartProgress = index * progressPerLine;
-      const lineEndProgress = (index + 1) * progressPerLine;
+    return lines.map((line, index) => {
+      const lineStart = index * progressPerLine;
+      const lineEnd = (index + 1) * progressPerLine;
 
       let lineProgress = 0;
-      if (textProgress >= lineEndProgress) {
+      if (textProgress >= lineEnd) {
         lineProgress = 100;
-      } else if (textProgress > lineStartProgress) {
-        lineProgress = ((textProgress - lineStartProgress) / progressPerLine) * 100;
+      } else if (textProgress > lineStart) {
+        lineProgress = ((textProgress - lineStart) / progressPerLine) * 100;
       }
 
-      return { text, lineProgress };
+      return { text: line, lineProgress };
     });
-  }, [lines, progress]);
+  }, [children, progress]);
 
   return (
     <div className="flex flex-col gap-4 items-start">
@@ -37,13 +38,10 @@ export const ReadingText = ({ lines, progress }: ReadingTextProps) => {
 
         let gradient;
         if (p >= 100) {
-          // 완료: 전체 검은색
           gradient = 'linear-gradient(to right, #000000 0%, #000000 100%)';
         } else if (p <= 0) {
-          // 시작 안함: 전체 회색
           gradient = 'linear-gradient(to right, #9ca3af 0%, #9ca3af 100%)';
         } else {
-          // 진행 중: 부드러운 그라데이션
           const blackEnd = Math.max(0, p - 10);
           const blueCenter = p;
           const blueToGrayEnd = Math.min(100, p + 5);

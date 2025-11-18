@@ -2,11 +2,12 @@ import { ReadingText } from '../components/ReadingText';
 
 interface Slide7Props {
   progress: number;
-  lines: string[];
 }
 
-export const Slide7 = ({ progress, lines }: Slide7Props) => (
+export const Slide7 = ({ progress }: Slide7Props) => (
   <div className="max-w-5xl">
-    <ReadingText lines={lines} progress={progress} />
+    <ReadingText progress={progress}>
+      {['테스트 결과', '학습 완료율 73% 달성']}
+    </ReadingText>
   </div>
 );

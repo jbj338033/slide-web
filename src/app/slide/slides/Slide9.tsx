@@ -2,11 +2,12 @@ import { ReadingText } from '../components/ReadingText';
 
 interface Slide9Props {
   progress: number;
-  lines: string[];
 }
 
-export const Slide9 = ({ progress, lines }: Slide9Props) => (
+export const Slide9 = ({ progress }: Slide9Props) => (
   <div className="max-w-5xl">
-    <ReadingText lines={lines} progress={progress} />
+    <ReadingText progress={progress}>
+      {['QuickLearn', '5분이면 충분합니다']}
+    </ReadingText>
   </div>
 );

@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ProgressBar } from './components/ProgressBar';
 import { Controls } from './components/Controls';
 import { TopControls } from './components/TopControls';
-import { slideConfigs, totalSlides, calculateDuration } from './slides';
+import { slides, totalSlides } from './slides';
+
+const SLIDE_DURATION = 5000; // 각 슬라이드 5초
 
 export default function SlidePage() {
   const [current, setCurrent] = useState(0);
@@ -16,25 +18,20 @@ export default function SlidePage() {
   const startTimeRef = useRef<number>(Date.now());
   const rafIdRef = useRef<number | null>(null);
 
-  const currentSlideConfig = slideConfigs[current];
-  const CurrentSlide = currentSlideConfig?.component;
-  const currentLines = currentSlideConfig?.lines || [];
+  const CurrentSlide = slides[current];
 
   useEffect(() => {
-    if (!currentSlideConfig) return;
+    if (!CurrentSlide) return;
 
     if (!isPlaying) {
-      // 일시정지 시 현재 진행률 유지
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }
       return;
     }
 
-    // 재생 시작: 현재 progress를 기반으로 남은 시간 계산
-    const duration = calculateDuration(currentSlideConfig.lines);
     const remainingProgress = 100 - progress;
-    const remainingTime = (remainingProgress / 100) * duration;
+    const remainingTime = (remainingProgress / 100) * SLIDE_DURATION;
     startTimeRef.current = Date.now();
 
     const animate = () => {
@@ -62,7 +59,7 @@ export default function SlidePage() {
         cancelAnimationFrame(rafIdRef.current);
       }
     };
-  }, [current, isPlaying, currentSlideConfig, progress]);
+  }, [current, isPlaying, CurrentSlide, progress]);
 
   const handlePlayPause = useCallback(() => {
     setIsPlaying((prev) => !prev);
@@ -144,7 +141,7 @@ export default function SlidePage() {
 
       <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
-          <CurrentSlide progress={progress} lines={currentLines} />
+          <CurrentSlide progress={progress} />
         </div>
       </div>
 

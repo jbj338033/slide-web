@@ -2,11 +2,12 @@ import { ReadingText } from '../components/ReadingText';
 
 interface Slide1Props {
   progress: number;
-  lines: string[];
 }
 
-export const Slide1 = ({ progress, lines }: Slide1Props) => (
+export const Slide1 = ({ progress }: Slide1Props) => (
   <div className="max-w-5xl">
-    <ReadingText lines={lines} progress={progress} />
+    <ReadingText progress={progress}>
+      {['온라인 강의 수강률', '평균 15%에 불과합니다']}
+    </ReadingText>
   </div>
 );
