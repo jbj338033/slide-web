@@ -1,49 +1,73 @@
+import { useMemo } from 'react';
+
 interface ReadingTextProps {
   lines: string[];
   progress: number;
 }
 
-export const ReadingText = ({ lines, progress }: ReadingTextProps) => {
-  const getLineProgress = (index: number) => {
-    const linesCount = lines.length;
-    const progressPerLine = 100 / linesCount;
-    const lineStart = index * progressPerLine;
-    const lineEnd = (index + 1) * progressPerLine;
+const TEXT_READING_RATIO = 0.8;
 
-    if (progress <= lineStart) return 0;
-    if (progress >= lineEnd) return 100;
-    return ((progress - lineStart) / progressPerLine) * 100;
-  };
+export const ReadingText = ({ lines, progress }: ReadingTextProps) => {
+  const lineData = useMemo(() => {
+    const totalLines = lines.length;
+    if (totalLines === 0) return [];
+
+    const textProgress = Math.min(progress / TEXT_READING_RATIO, 100);
+    const progressPerLine = 100 / totalLines;
+
+    return lines.map((text, index) => {
+      const lineStartProgress = index * progressPerLine;
+      const lineEndProgress = (index + 1) * progressPerLine;
+
+      let lineProgress = 0;
+      if (textProgress >= lineEndProgress) {
+        lineProgress = 100;
+      } else if (textProgress > lineStartProgress) {
+        lineProgress = ((textProgress - lineStartProgress) / progressPerLine) * 100;
+      }
+
+      return { text, lineProgress };
+    });
+  }, [lines, progress]);
 
   return (
     <div className="flex flex-col gap-4 items-start">
-      {lines.map((text, index) => {
-        const lineProgress = getLineProgress(index);
-        const isComplete = lineProgress === 100;
+      {lineData.map((line, index) => {
+        const p = line.lineProgress;
+
+        let gradient;
+        if (p >= 100) {
+          // 완료: 전체 검은색
+          gradient = 'linear-gradient(to right, #000000 0%, #000000 100%)';
+        } else if (p <= 0) {
+          // 시작 안함: 전체 회색
+          gradient = 'linear-gradient(to right, #9ca3af 0%, #9ca3af 100%)';
+        } else {
+          // 진행 중: 부드러운 그라데이션
+          const blackEnd = Math.max(0, p - 10);
+          const blueCenter = p;
+          const blueToGrayEnd = Math.min(100, p + 5);
+
+          gradient = `linear-gradient(to right,
+            #000000 0%,
+            #000000 ${blackEnd}%,
+            #3b82f6 ${blueCenter}%,
+            #9ca3af ${blueToGrayEnd}%,
+            #9ca3af 100%)`;
+        }
 
         return (
-          <div key={index} className="relative">
-            <div className="text-gray-400 text-4xl font-bold whitespace-nowrap">
-              {text}
-            </div>
-            <div
-              className="absolute inset-0 overflow-hidden will-change-auto"
-              style={{ width: `${lineProgress}%` }}
-            >
-              <div
-                className="text-4xl font-bold whitespace-nowrap text-transparent"
-                style={{
-                  backgroundImage: isComplete
-                    ? 'linear-gradient(to right, #000, #000)'
-                    : 'linear-gradient(to right, #000 0%, #000 70%, #3b82f6 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                {text}
-              </div>
-            </div>
+          <div
+            key={index}
+            className="text-4xl font-bold whitespace-nowrap"
+            style={{
+              backgroundImage: gradient,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            {line.text}
           </div>
         );
       })}

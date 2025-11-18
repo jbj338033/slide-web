@@ -1,12 +1,12 @@
 import { ReadingText } from '../components/ReadingText';
 
 interface Slide2Props {
-  progress?: number;
+  progress: number;
+  lines: string[];
 }
 
-export const Slide2 = ({ progress = 0 }: Slide2Props) => (
+export const Slide2 = ({ progress, lines }: Slide2Props) => (
   <div className="max-w-5xl">
-    <h1 className="text-6xl font-bold mb-12">AI란 무엇인가</h1>
-    <ReadingText lines={['인간의 학습능력과 추론능력을', '컴퓨터로 구현한 기술입니다']} progress={progress} />
+    <ReadingText lines={lines} progress={progress} />
   </div>
 );

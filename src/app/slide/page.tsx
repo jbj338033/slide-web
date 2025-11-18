@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ProgressBar } from './components/ProgressBar';
 import { Controls } from './components/Controls';
 import { TopControls } from './components/TopControls';
-import { slides, totalSlides, slideDurations } from './slides';
+import { slideConfigs, totalSlides, calculateDuration } from './slides';
 
 export default function SlidePage() {
   const [current, setCurrent] = useState(0);
@@ -13,68 +13,92 @@ export default function SlidePage() {
   const [isPrevAnimating, setIsPrevAnimating] = useState(false);
   const [isNextAnimating, setIsNextAnimating] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+  const rafIdRef = useRef<number | null>(null);
 
-  const CurrentSlide = slides[current];
+  const currentSlideConfig = slideConfigs[current];
+  const CurrentSlide = currentSlideConfig?.component;
+  const currentLines = currentSlideConfig?.lines || [];
 
   useEffect(() => {
-    if (isPlaying) {
-      const currentDuration = slideDurations[current];
-      intervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            if (current < totalSlides - 1) {
-              setCurrent(current + 1);
-              return 0;
-            }
-            setIsPlaying(false);
-            return 100;
-          }
-          return prev + (100 / (currentDuration / 100));
-        });
-      }, 100);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    if (!currentSlideConfig) return;
+
+    if (!isPlaying) {
+      // 일시정지 시 현재 진행률 유지
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
       }
+      return;
     }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+    // 재생 시작: 현재 progress를 기반으로 남은 시간 계산
+    const duration = calculateDuration(currentSlideConfig.lines);
+    const remainingProgress = 100 - progress;
+    const remainingTime = (remainingProgress / 100) * duration;
+    startTimeRef.current = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTimeRef.current;
+      const newProgress = Math.min(progress + (elapsed / remainingTime) * remainingProgress, 100);
+
+      if (newProgress >= 100) {
+        setProgress(100);
+        if (current < totalSlides - 1) {
+          setCurrent((prev) => prev + 1);
+          setProgress(0);
+        } else {
+          setIsPlaying(false);
+        }
+      } else {
+        setProgress(newProgress);
+        rafIdRef.current = requestAnimationFrame(animate);
       }
     };
-  }, [current, isPlaying]);
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
+    rafIdRef.current = requestAnimationFrame(animate);
 
-  const handlePrev = () => {
-    if (current > 0) {
-      setIsPrevAnimating(true);
-      setTimeout(() => setIsPrevAnimating(false), 200);
-      setCurrent(current - 1);
-      setProgress(0);
-      setIsPlaying(true);
-    }
-  };
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, [current, isPlaying, currentSlideConfig, progress]);
 
-  const handleNext = () => {
-    if (current < totalSlides - 1) {
-      setIsNextAnimating(true);
-      setTimeout(() => setIsNextAnimating(false), 200);
-      setCurrent(current + 1);
-      setProgress(0);
-      setIsPlaying(true);
-    }
-  };
+  const handlePlayPause = useCallback(() => {
+    setIsPlaying((prev) => !prev);
+  }, []);
 
-  const handleToggleMute = () => {
-    setIsMuted(!isMuted);
-  };
+  const handlePrev = useCallback(() => {
+    setCurrent((prevCurrent) => {
+      if (prevCurrent > 0) {
+        setIsPrevAnimating(true);
+        setTimeout(() => setIsPrevAnimating(false), 200);
+        setProgress(0);
+        setIsPlaying(true);
+        return prevCurrent - 1;
+      }
+      return prevCurrent;
+    });
+  }, []);
 
-  const handleShare = async () => {
+  const handleNext = useCallback(() => {
+    setCurrent((prevCurrent) => {
+      if (prevCurrent < totalSlides - 1) {
+        setIsNextAnimating(true);
+        setTimeout(() => setIsNextAnimating(false), 200);
+        setProgress(0);
+        setIsPlaying(true);
+        return prevCurrent + 1;
+      }
+      return prevCurrent;
+    });
+  }, []);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted((prev) => !prev);
+  }, []);
+
+  const handleShare = useCallback(async () => {
     try {
       if (navigator.share) {
         await navigator.share({
@@ -84,22 +108,22 @@ export default function SlidePage() {
       } else {
         await navigator.clipboard.writeText(window.location.href);
       }
-    } catch (err) {}
-  };
+    } catch (err) {
+      // Silently fail
+    }
+  }, []);
 
-  const handleExit = () => {
+  const handleExit = useCallback(() => {
     window.history.back();
-  };
+  }, []);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         handlePrev();
-      }
-      if (e.key === 'ArrowRight') {
+      } else if (e.key === 'ArrowRight') {
         handleNext();
-      }
-      if (e.key === ' ') {
+      } else if (e.key === ' ') {
         e.preventDefault();
         handlePlayPause();
       }
@@ -107,16 +131,20 @@ export default function SlidePage() {
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [current, isPlaying]);
+  }, [handlePrev, handleNext, handlePlayPause]);
+
+  if (!CurrentSlide) {
+    return null;
+  }
 
   return (
-    <div className="w-screen h-screen bg-white relative">
+    <div className="fixed inset-0 w-full h-full bg-white overflow-hidden">
       <TopControls isMuted={isMuted} onToggleMute={handleToggleMute} onShare={handleShare} onExit={handleExit} />
       <ProgressBar current={current} progress={progress} totalSlides={totalSlides} />
 
-      <div className="w-full h-full flex items-center justify-center pt-6">
+      <div className="w-full h-full flex items-center justify-center">
         <div className="text-center">
-          <CurrentSlide progress={progress} />
+          <CurrentSlide progress={progress} lines={currentLines} />
         </div>
       </div>
 
